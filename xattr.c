@@ -110,7 +110,7 @@ ssize_t listAttrs( const char* path, void* data, size_t nbytes ) {
     return ret;
 }
 
-#endif
+#endif // *BSD
 
 // GNU+Linux 
 #ifdef __gnu_linux__
@@ -210,14 +210,90 @@ ssize_t deleteAttr( const char* path, const char* attrname ) {
     return ret;
 }
 
-ssize_t listAttrs( const char* path, void* data, size_t nbytes ) {
-    // TODO: remove non-user namespace list items and remove the namespace name
-    // specifier
-    ssize_t ret = listxattr( path, (char*) data, nbytes );
+char* seekToInterestingPart( const char* s, size_t entriesRemaining ) {
+    // seeks past just the namespace part if its a usernamespace string,
+    // otherwise it skips to the next one and tries again
 
-    checkReturnValue( "listAttrs", ret );
+    if ( entriesRemaining < 1 )
+        return NULL;
 
-    return ret;
+    entriesRemaining--;
+
+    char namespaceBUF[10];
+    char nameBUF[100]; // allows me to wildcard at the end of the string
+
+    int sscanfRet = sscanf( s, "%s.%s", namespaceBUF, nameBUF );
+    if ( sscanfRet != 2 )
+        errExit( "sscanf in seekToInterestingPart" );
+
+    if ( strncmp( "user.", namespaceBUF, 5 ) == 0 ) {
+        // this is in the user namespace so return the address of the name
+        return strchr( s, '.' ) + 1;
+    } else {
+        // this is not in the user namespace so try the next entry
+        return seekToInterestingPart( s + strlen( s ) + 2, entriesRemaining ); 
+    }
+
+    return NULL;
 }
 
-#endif
+ssize_t listAttrs( const char* path, void* data, size_t nbytes ) {
+    ssize_t numEntries = listxattr( path, (char*) data, nbytes );
+
+    checkReturnValue( "listAttrs", numEntries );
+    if ( numEntries < 0 )
+        errExit( "negative number of entries" );
+    else if ( numEntries == 0 )
+        return 0; // there are no attrs
+
+    // else (there are some attributes for this file
+ 
+    // remove non-user namespace list items and remove the namespace name
+    // specifier
+    
+    // first allocate a list of pointers to each string. Worst case every
+    // attribute which is found is in the USER namespace so we need a
+    // dynamically array which is this long
+   char** usefulBits = malloc( numEntries );
+    if ( usefulBits == NULL )
+        errExit( "usefulBits malloc in listAttrs" );
+
+    // fill usefulBits with NULL for now
+/*    for ( ssize_t i = 0; i < numEntries; i++ )
+        usefulBits[i] = NULL;*/
+
+    // now put in the relevent pointers
+    for ( ssize_t i = 0; i < numEntries; i++ ) { // don't do this too many times
+        ssize_t numEntriesRemaining = numEntries;
+        // returns NULL if we have run out
+        usefulBits[i] = seekToInterestingPart( (char*) data, numEntriesRemaining );
+    }
+
+    // work out how many entries we have
+    ssize_t numInterestingEntries = 0;
+    for ( ssize_t i = 0; i < numEntries; i++ ) {
+        if ( usefulBits[i] == NULL ) {
+            // this is all of them
+            break;
+        } else {
+            numInterestingEntries++;
+        }
+    }
+
+    // now we overwrite data with the newly edited list. This will definately
+    // fit because we have removed things from what was previously in data
+    // for the same reason we can be sure that we won't be overwriting ourself
+
+    // these for loops could all be combined but muh readability
+    char* currPos = (char*) data;
+    for ( ssize_t i = 0; i < numInterestingEntries; i++ ) {
+        size_t size = strlen( usefulBits[i] );
+        strcpy( currPos, usefulBits[i] );
+        currPos += ( size + 2 );
+    }
+        
+    free( usefulBits );
+    return numInterestingEntries;
+}
+
+#endif // GNU+Linux
