@@ -165,7 +165,9 @@ ssize_t getAttr( const char* path, const char* attrname, void* data, size_t nbyt
 }
 
 ssize_t setAttr( const char* path, const char *attrname, const void* data, size_t nbytes ) {
-    ssize_t ret = setxattr( path, attrname, data, size );
+    // flags = 0 means it will be created if it does not exist or replaced if
+    // it does
+    ssize_t ret = setxattr( path, attrname, data, nbytes, 0 );
 
     checkReturnValue( "setAttr", ret );
 
