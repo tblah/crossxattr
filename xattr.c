@@ -24,7 +24,7 @@ void errExit( const char* errMsg ) {
     exit( EXIT_FAILURE );
 }
 
-// wrappers for the systemcalls so I can use them in go
+// wrappers for the systemcalls so they have a common interface
 
 #define ERR_STR_SIZE 100
 
@@ -118,6 +118,7 @@ ssize_t listAttrs( const char* path, void* data, size_t nbytes ) {
 #include <sys/types.h>
 #include <attr/xattr.h>
 #include <errno.h>
+#include <string.h>
 
 void checkReturnValue( const char* callerName, ssize_t ret ) {
     if ( ret != -1 )
@@ -155,9 +156,28 @@ void checkReturnValue( const char* callerName, ssize_t ret ) {
         errExit( errStr );
     }
 }
-// TODO: add the user namespace prefix to all of the names
+
+char* addNamespacePrefix( const char* str ) {
+    // adds "user." to the beginning of the name to specify the namespace
+    
+    // strlen( "user." ) == 5
+    char* ret = ( char* ) malloc( strlen( str ) + 5 );
+    if ( ret == NULL )
+        errExit( "allocating namespace prefix memory" );
+
+    int snprintfRet = snprintf( ret, strlen( str ) + 5 , "user.%s", str );
+    if ( snprintfRet < 0 )
+        errExit( "snprintf in addNamespacePrefix" );
+
+    return ret;
+}
+
 ssize_t getAttr( const char* path, const char* attrname, void* data, size_t nbytes ) {
-    ssize_t ret = getxattr( path, attrname, data, nbytes );
+    char* name = addNamespacePrefix( attrname );
+    ssize_t ret = getxattr( path, name, data, nbytes );
+
+    free( name );
+    name = NULL;
 
     checkReturnValue( "getAttr", ret );
 
@@ -165,9 +185,13 @@ ssize_t getAttr( const char* path, const char* attrname, void* data, size_t nbyt
 }
 
 ssize_t setAttr( const char* path, const char *attrname, const void* data, size_t nbytes ) {
+    char* name = addNamespacePrefix( attrname );
     // flags = 0 means it will be created if it does not exist or replaced if
     // it does
     ssize_t ret = setxattr( path, attrname, data, nbytes, 0 );
+
+    free( name );
+    name = NULL;
 
     checkReturnValue( "setAttr", ret );
 
@@ -175,7 +199,11 @@ ssize_t setAttr( const char* path, const char *attrname, const void* data, size_
 }
 
 ssize_t deleteAttr( const char* path, const char* attrname ) {
+    char* name = addNamespacePrefix( attrname );
     ssize_t ret = removexattr( path, attrname );
+
+    free( name );
+    name = NULL;
 
     checkReturnValue( "deleteAttr", ret );
 

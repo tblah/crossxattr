@@ -10,7 +10,7 @@ $(TESTOUTNAME): test.o xattr.o
 test.o: test.c xattr.h
 	$(CC) $(CCOPTS) -c test.c -o $@
 
-xattr.o:
+xattr.o: xattr.c
 	$(CC) $(CCOPTS) -c xattr.c -o $@
 
 clean:
