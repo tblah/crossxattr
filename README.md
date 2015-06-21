@@ -26,3 +26,12 @@ For listAttrs data is set to be a NULL seperated list of the names of the attrib
 ```
 name1\0name2\0name3\0...
 ```
+
+### Return Values
+They return -1 on failure (everything other than attribute does not exist is
+caught internally).
+
+Otherwise they return whatever the relevant syscall returns. 
+
+The one exception to this is listAttrs. This returns the number of entries in
+data.
