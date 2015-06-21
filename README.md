@@ -8,7 +8,7 @@ Support is currently planned for FreeBSD, NetBSD, OpenBSD, DragonflyBSD and GNU+
 ## Functions
 All extended attributes are operated on in the USER namespace. Extended attributes of links are not planned to be supported (although there is no reason why not).
 
-```
+``` C
 ssize_t getAttr( const char* path, const char* attrname, void* data, size_t nbytes );
 ssize_t setAttr( const char* path, const char* attrname, const void* data, size_t nbytes );
 ssize_t deleteAttr( const char* path, const char* attrname );
