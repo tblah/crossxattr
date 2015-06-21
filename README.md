@@ -15,14 +15,14 @@ ssize_t deleteAttr( const char* path, const char* attrname );
 ssize_t listAttrs( const char* path, void* data, size_t nbytes );
 ```
 
-path - path to the file to be operated upon
-attrname - the name of the attribute, not specifying the namespace
-nbytes - the size of the buffer data
-data - the buffer for the result of the operation
+- path - path to the file to be operated upon
+- attrname - the name of the attribute, not specifying the namespace
+- nbytes - the size of the buffer data
+- data - the buffer for the result of the operation
 
-For getAttr data is set to the value of the specified attribute,
-For setAttr data is the value to which the specified attribute is set,
-For listAttrs data is set to be a NULL seperated list of the names of the attributes which are in the USER namespace of the file: e.g.
+- For getAttr data is set to the value of the specified attribute,
+- For setAttr data is the value to which the specified attribute is set,
+- For listAttrs data is set to be a NULL seperated list of the names of the attributes which are in the USER namespace of the file: e.g.
 ```
 name1\0name2\0name3\0...
 ```
