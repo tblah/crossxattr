@@ -1,6 +1,6 @@
 /*
 Copyright (c) 2015 Tom Eccles
-github.com/tblah
+github.com/tblah/crossxattr
 
 This is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -15,18 +15,10 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.*/
 
-// exit on error function
-#include <stdlib.h>
-#include <stdio.h>
-
-void errExit( const char* errMsg ) {
-    fprintf( stderr, "Quitting on extended attribute error %s\n", errMsg );
-    exit( EXIT_FAILURE );
-}
-
+#include "errExit.h"
 // wrappers for the systemcalls so they have a common interface
 
-#define ERR_STR_SIZE 100
+#define ERR_STR_SIZE 200
 
 // *BSD support
 #if ( defined __FreeBSD__ || defined __NetBSD__ || defined __OpenBSD__ || defined __DragonFly__ )
@@ -119,6 +111,8 @@ ssize_t listAttrs( const char* path, void* data, size_t nbytes ) {
 #include <attr/xattr.h>
 #include <errno.h>
 #include <string.h>
+#include <stdlib.h>
+#include <stdio.h>
 
 void checkReturnValue( const char* callerName, ssize_t ret ) {
     if ( ret != -1 )
@@ -188,7 +182,7 @@ ssize_t setAttr( const char* path, const char *attrname, const void* data, size_
     char* name = addNamespacePrefix( attrname );
     // flags = 0 means it will be created if it does not exist or replaced if
     // it does
-    ssize_t ret = setxattr( path, attrname, data, nbytes, 0 );
+    ssize_t ret = setxattr( path, name, data, nbytes, 0 );
 
     free( name );
     name = NULL;
@@ -200,7 +194,7 @@ ssize_t setAttr( const char* path, const char *attrname, const void* data, size_
 
 ssize_t deleteAttr( const char* path, const char* attrname ) {
     char* name = addNamespacePrefix( attrname );
-    ssize_t ret = removexattr( path, attrname );
+    ssize_t ret = removexattr( path, name );
 
     free( name );
     name = NULL;
@@ -210,63 +204,66 @@ ssize_t deleteAttr( const char* path, const char* attrname ) {
     return ret;
 }
 
-char* seekToInterestingPart( const char* s, size_t entriesRemaining ) {
+char* seekToInterestingPart( const char* s, size_t* entriesRemaining ) {
     // seeks past just the namespace part if its a usernamespace string,
     // otherwise it skips to the next one and tries again
 
-    if ( entriesRemaining < 1 )
+    if ( (*entriesRemaining) < 1 )
         return NULL;
 
-    entriesRemaining--;
+    (*entriesRemaining)--;
 
-    char namespaceBUF[10];
-    char nameBUF[100]; // allows me to wildcard at the end of the string
-
-    int sscanfRet = sscanf( s, "%s.%s", namespaceBUF, nameBUF );
-    if ( sscanfRet != 2 )
-        errExit( "sscanf in seekToInterestingPart" );
-
-    if ( strncmp( "user.", namespaceBUF, 5 ) == 0 ) {
+    if ( strncmp( "user.", s, 5 ) == 0 ) {
         // this is in the user namespace so return the address of the name
         return strchr( s, '.' ) + 1;
     } else {
         // this is not in the user namespace so try the next entry
-        return seekToInterestingPart( s + strlen( s ) + 2, entriesRemaining ); 
+        return seekToInterestingPart( s + strlen( s ) + 1, entriesRemaining ); 
     }
 
     return NULL;
 }
 
+ssize_t numCharInStr( char c, char* s, ssize_t len ) {
+    ssize_t ret = 0;
+
+    for ( ssize_t i = 0; i < len; i++ )
+        if ( s[i] == c )
+            ret++;
+
+    return ret;
+}
+
 ssize_t listAttrs( const char* path, void* data, size_t nbytes ) {
-    ssize_t numEntries = listxattr( path, (char*) data, nbytes );
+    ssize_t listxattrRet = listxattr( path, (char*) data, nbytes );
 
-    checkReturnValue( "listAttrs", numEntries );
-    if ( numEntries < 0 )
-        errExit( "negative number of entries" );
-    else if ( numEntries == 0 )
-        return 0; // there are no attrs
+    checkReturnValue( "listAttrs", listxattrRet);
 
-    // else (there are some attributes for this file
- 
+    if ( listxattrRet < 1 )
+        errExit( "listxattrRet < 1" );
+
+    ssize_t numEntries = numCharInStr( '.', data, listxattrRet );
+
     // remove non-user namespace list items and remove the namespace name
     // specifier
     
     // first allocate a list of pointers to each string. Worst case every
     // attribute which is found is in the USER namespace so we need a
     // dynamically array which is this long
-   char** usefulBits = malloc( numEntries );
+    char** usefulBits = (char**) malloc( sizeof(char*) * numEntries );
     if ( usefulBits == NULL )
         errExit( "usefulBits malloc in listAttrs" );
 
     // fill usefulBits with NULL for now
-/*    for ( ssize_t i = 0; i < numEntries; i++ )
-        usefulBits[i] = NULL;*/
+    for ( ssize_t i = 0; i < numEntries; i++ )
+        usefulBits[i] = NULL;
 
     // now put in the relevent pointers
-    for ( ssize_t i = 0; i < numEntries; i++ ) { // don't do this too many times
-        ssize_t numEntriesRemaining = numEntries;
+    size_t numEntriesRemaining = numEntries;
+    usefulBits[0] = seekToInterestingPart( (char*) data, &numEntriesRemaining );
+    for ( ssize_t i = 1; i < numEntries; i++ ) { // don't do this too many times
         // returns NULL if we have run out
-        usefulBits[i] = seekToInterestingPart( (char*) data, numEntriesRemaining );
+        usefulBits[i] = seekToInterestingPart( usefulBits[i-1] + strlen(usefulBits[i-1]) + 1, &numEntriesRemaining );
     }
 
     // work out how many entries we have

@@ -1,6 +1,6 @@
 /*
 Copyright (c) 2015  Tom Eccles
-github.com/tblah
+github.com/tblah/crossxattr
 
 This is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -20,6 +20,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define XATTR_H
 
 #include <sys/types.h>
+
+// see README.md for more information on these functions
 
 // this is always done in the user namespace so only the name of the attribute
 // should be specified in attrname
