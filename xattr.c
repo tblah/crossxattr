@@ -16,7 +16,7 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.*/
 
 #include "errExit.h"
-// wrappers for the systemcalls so they have a common interface
+// wrappers for the system calls so they have a common interface
 
 #define ERR_STR_SIZE 200
 
@@ -33,7 +33,7 @@ void checkReturnValue( const char* callerName, ssize_t ret ) {
     char errStr[ERR_STR_SIZE];
 
     if ( errno == EFAULT ) {
-        int snprintfRet = snprintf( errStr, ERR_STR_SIZE, "EFAULT: invalid arguements to %s", callerName ); 
+        int snprintfRet = snprintf( errStr, ERR_STR_SIZE, "EFAULT: invalid arguments to %s", callerName ); 
         if ( snprintfRet < 0 )
             errExit( "sprintf" );
 
@@ -47,7 +47,7 @@ void checkReturnValue( const char* callerName, ssize_t ret ) {
         errExit( errStr );
 
     } else if ( errno == ENOATTR ) {
-        int snprintfRet = snprintf( errStr, ERR_STR_SIZE, "Requested non-existant extended attribute in %s", callerName );
+        int snprintfRet = snprintf( errStr, ERR_STR_SIZE, "Requested non-existent extended attribute in %s", callerName );
         if ( snprintfRet < 0 )
             errExit( "sprintf" );
 
@@ -60,7 +60,8 @@ void checkReturnValue( const char* callerName, ssize_t ret ) {
 
         errExit( errStr );
     } else {
-        int snprintfRet = snprintf( errStr, ERR_STR_SIZE, "Some other error occured. See the man pages (chapter 2) for stat and for the linux system call. This is from %s and errno was %i", callerName, errno );
+        int snprintfRet = snprintf( errStr, ERR_STR_SIZE, "Some other error occurred. See the man pages (chapter 2) for "
+						"stat and for the linux system call. This is from %s and errno was %i", callerName, errno );
         if ( snprintfRet < 0 )
             errExit( "snprintf" );
 
@@ -143,7 +144,8 @@ void checkReturnValue( const char* callerName, ssize_t ret ) {
     } else if ( errno == EACCES )
         errExit( "You do not have search permission on one of the directories in the specified path\n" );
     else {
-        int snprintfRet = snprintf( errStr, ERR_STR_SIZE, "Some other error occured. See the man pages (chapter 2) for stat and for the linux system call. This is from %s and errno was %i", callerName, errno );
+        int snprintfRet = snprintf( errStr, ERR_STR_SIZE, "Some other error occurred. "
+						"See the man pages (chapter 2) for stat and for the linux system call. This is from %s and errno was %i", callerName, errno );
         if ( snprintfRet < 0 )
             errExit( "snprintf" );
 
@@ -258,7 +260,7 @@ ssize_t listAttrs( const char* path, void* data, size_t nbytes ) {
     for ( ssize_t i = 0; i < numEntries; i++ )
         usefulBits[i] = NULL;
 
-    // now put in the relevent pointers
+    // now put in the relevant pointers
     size_t numEntriesRemaining = numEntries;
     usefulBits[0] = seekToInterestingPart( (char*) data, &numEntriesRemaining );
     for ( ssize_t i = 1; i < numEntries; i++ ) { // don't do this too many times
@@ -277,11 +279,11 @@ ssize_t listAttrs( const char* path, void* data, size_t nbytes ) {
         }
     }
 
-    // now we overwrite data with the newly edited list. This will definately
+    // now we overwrite data with the newly edited list. This will definitely
     // fit because we have removed things from what was previously in data
     // for the same reason we can be sure that we won't be overwriting ourself
 
-    // these for loops could all be combined but muh readability
+    // these for loops could all be combined however this form is better for readability
     char* currPos = (char*) data;
     for ( ssize_t i = 0; i < numInterestingEntries; i++ ) {
         size_t size = strlen( usefulBits[i] );
