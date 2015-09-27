@@ -20,8 +20,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.*/
 
 #define ERR_STR_SIZE 200
 
-// *BSD support
-#if ( defined __FreeBSD__ || defined __NetBSD__ || defined __OpenBSD__ || defined __DragonFly__ )
+// FreeBSD support
+#if ( defined __FreeBSD__ )
 
 #include <sys/types.h>
 #include <sys/extattr.h>
