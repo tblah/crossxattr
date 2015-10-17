@@ -28,45 +28,57 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.*/
 #include <errno.h>
 #include <sys/param.h>
 #include <sys/vnode.h>
+#include <stdio.h>
 
 void checkReturnValue( const char* callerName, ssize_t ret ) {
+	/*
+	 *Errno documentation can be found online here:
+	 *https://www.freebsd.org/cgi/man.cgi?query=errno&apropos=0&sektion=0&manpath=FreeBSD+10.2-RELEASE&arch=default&format=html
+	 *They can of course also be accessed via man on FreeBSD
+	 * */
+
+	if ( ret >= 0 ) {
+		return;
+	}
+
     char errStr[ERR_STR_SIZE];
 
-    if ( errno == EFAULT ) {
-        int snprintfRet = snprintf( errStr, ERR_STR_SIZE, "EFAULT: invalid arguments to %s", callerName ); 
-        if ( snprintfRet < 0 )
-            errExit( "sprintf" );
+	int snprintfRet = 0;
 
-        errExit( errStr );
+	switch ( errno ) {
+	case EFAULT:
+		snprintfRet = snprintf( errStr, ERR_STR_SIZE, "EFAULT in %s", callerName );
+	break;
+	
+	case ENAMETOOLONG:
+		snprintfRet = snprintf( errStr, ERR_STR_SIZE, "ENAMETOOLONG: in %s", callerName );
+	break;
+	
+	case ENOATTR:
+		snprintfRet = snprintf( errStr, ERR_STR_SIZE, "ENOATTR in %s", callerName );
+	break;
 
-    } else if ( errno == ENAMETOOLONG ) {
-        int snprintfRet = snprintf( errStr, ERR_STR_SIZE, "ENAMETOOLONG: from %s", callerName );
-        if ( snprintfRet < 0 )
-            errExit( "sprintf" );
+	case ENOTDIR:
+		snprintfRet = snprintf( errStr, ERR_STR_SIZE, "ENOTDIR in %s", callerName );
+	break;
 
-        errExit( errStr );
+	case ENOENT:
+		snprintfRet = snprintf( errStr, ERR_STR_SIZE, "ENOENT in %s", callerName );
+	break;
 
-    } else if ( errno == ENOATTR ) {
-        int snprintfRet = snprintf( errStr, ERR_STR_SIZE, "Requested non-existent extended attribute in %s", callerName );
-        if ( snprintfRet < 0 )
-            errExit( "sprintf" );
+	case EACCES:
+		snprintfRet = snprintf( errStr, ERR_STR_SIZE, "EACCES in %s", callerName );
+	break;
 
-        fprintf( stderr, "%s\n", errStr );
+	default:
+		snprintfRet = snprintf( errStr, ERR_STR_SIZE, "Unknown error %i in %s", errno, callerName);
+	}
 
-    } else if ( ( errno == ENOTDIR ) || ( ret == ENAMETOOLONG) || ( ret == ENOENT ) || ( ret == EACCES ) ) {
-        int snprintfRet = snprintf( errStr, ERR_STR_SIZE, "There is a problem with the path given to %s", callerName );
-        if ( snprintfRet < 0 )
-            errExit( "snprintf" );
+	if ( snprintfRet < 0 ) {
+		errExit( "snprintf");
+	}
 
-        errExit( errStr );
-    } else {
-        int snprintfRet = snprintf( errStr, ERR_STR_SIZE, "Some other error occurred. See the man pages (chapter 2) for "
-						"stat and for the linux system call. This is from %s and errno was %i", callerName, errno );
-        if ( snprintfRet < 0 )
-            errExit( "snprintf" );
-
-        errExit( errStr );
-    }
+	errExit( errStr );
 }
 
 ssize_t getAttr( const char* path, const char* attrname, void* data, size_t nbytes ) {
@@ -94,16 +106,32 @@ ssize_t deleteAttr( const char* path, const char* attrname ) {
 }
 
 ssize_t listAttrs( const char* path, void* data, size_t nbytes ) {
-    // TODO: fix output to conform with independent form as specified in the
-    // headerfile
+    /* TODO: fix output to conform with independent form as specified in the
+     header file
+
+	 extattr_list_file() returns a list of attributes present in the requested namespace.
+	 Each list entry consists of a single byte containing the length of the attribute name.
+	 The attribute name is not terminated by ASCII 0 (nul).
+	 */
     ssize_t ret = extattr_list_file( path, EXTATTR_NAMESPACE_USER, data, nbytes );
 
     checkReturnValue( "listAttrs", ret );
-
+	//Do the string manipulation
+	char* bitstring = data;
+	int len = (int) bitstring[0];
+	int i = 1;
+	while ( i < nbytes ){
+		if ( i == len ) {
+			len = (int) bitstring[i];
+			bitstring[i] = '\0';
+		}
+		bitstring[i-1] = bitstring[i];
+		i++;
+	}
     return ret;
 }
 
-#endif // *BSD
+#endif // FreeBSD
 
 // GNU+Linux 
 #ifdef __gnu_linux__

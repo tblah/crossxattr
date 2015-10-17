@@ -1,4 +1,8 @@
-TESTOUTNAME = ctest
+#!/bin/sh
+
+#makefile config
+
+echo 'TESTOUTNAME = ctest
 CCOPTS = -Wall -O2  --std=c99 -g
 LDOPTS = $(CCOPTS)
 CC = cc
@@ -25,18 +29,29 @@ libxattr.so: xattr.o
 errExit.o: errExit.c
 	$(CC) $(CCOPTS) -fpic -c errExit.c -o $@
 
+install:
+	cp libxattr.a $(INSTALL_PATH)/lib/libxattr.a; true
+	cp libxattr.so $(INSTALL_PATH)/lib/libxattr.so; true
+	cp xattr.h $(INSTALL_PATH)/include/libxattr.h; true
+
+uninstall:
+	@-2>/dev/null rm $(INSTALL_PATH)/lib/libxattr.a; true
+	@-2>/dev/null rm $(INSTALL_PATH)/lib/libxattr.so; true
+	@-2>/dev/null rm $(INSTALL_PATH)/include/libxattr.h; true' > Makefile;
+
+	OS=$(uname);
+if [ "$OS" = "FreeBSD" ]; then
+		echo 'clean:
+		@-2>/dev/null rm -f *.o *.a *.so $(TESTOUTNAME); true
+
+' >> Makefile;
+	else
+		echo '
 clean:
 	@-2>/dev/null rm $(shell find . -name "*.o"); true
 	@-2>/dev/null rm $(shell find . -name "*.a"); true
 	@-2>/dev/null rm $(shell find . -name "*.so"); true
 	@-2>/dev/null rm $(TESTOUTNAME); true
 
-install:
-	@-cp libxattr.a $(INSTALL_PATH)/lib/libxattr.a; true
-	@-cp libxattr.so $(INSTALL_PATH)/lib/libxattr.so; true
-	@-cp xattr.h $(INSTALL_PATH)/include/libxattr.h; true
-
-uninstall:
-	@-2>/dev/null rm $(INSTALL_PATH)/lib/libxattr.a; true
-	@-2>/dev/null rm $(INSTALL_PATH)/lib/libxattr.so; true
-	@-2>/dev/null rm $(INSTALL_PATH)/include/libxattr.h; true
+' >> Makefile;
+fi
