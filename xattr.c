@@ -144,41 +144,48 @@ ssize_t listAttrs( const char* path, void* data, size_t nbytes ) {
 #include <stdio.h>
 
 void checkReturnValue( const char* callerName, ssize_t ret ) {
-    if ( ret != -1 )
+
+    if ( ret >= 0 ) {
         return;
+	}
 
     char errStr[ERR_STR_SIZE];
+	int snprintfRet = 0;
     
-    if ( errno == ENOATTR ) {
-        int snprintfRet = snprintf( errStr, ERR_STR_SIZE, "The named attribute does not exist or you have no access to it (from %s)",
-                callerName );
-        if ( snprintfRet < 0 )
-            errExit( "snprintf" );
+	switch ( errno ) {
+	case ENOATTR:
+		snprintfRet = snprintf( errStr, ERR_STR_SIZE, "ENOATTR in %s", callerName );
+	break;
 
-        fprintf( stderr, "%s\n", errStr );
+	case ENOTSUP:
+		snprintfRet = snprintf( errStr, ERR_STR_SIZE, "ENOSUP in %s", callerName );
+	break;
 
-    } else if ( errno == ENOTSUP ) {
-        errExit( "You forgot to mount the filesystem with extended attributes enabled" );
+	case ERANGE:
+		snprintfRet = snprintf( errStr, ERR_STR_SIZE, "ERANGE in %s", callerName );
+	break;
 
-    } else if ( errno == ERANGE ) {
-        int snprintfRet = snprintf( errStr, ERR_STR_SIZE, "The size of the buffer is insufficient to hold the result (from %s)",
-                callerName );
-        if (snprintfRet < 0 )
-            errExit( "sprintf" );
+	case EDQUOT:
+		snprintfRet = snprintf( errStr, ERR_STR_SIZE, "EDQUOT in %s", callerName );
+	break;
 
-        errExit( errStr );
-    } else if ( ( errno == EDQUOT ) || ( errno == ENOSPC ) ) {
-        errExit( "There is insufficient space on the filesystem or in the user filesystem quota to perform extended attribute operation\n" );
-    } else if ( errno == EACCES )
-        errExit( "You do not have search permission on one of the directories in the specified path\n" );
-    else {
-        int snprintfRet = snprintf( errStr, ERR_STR_SIZE, "Some other error occurred. "
-						"See the man pages (chapter 2) for stat and for the linux system call. This is from %s and errno was %i", callerName, errno );
-        if ( snprintfRet < 0 )
-            errExit( "snprintf" );
+	case ENOSPC:
+		snprintfRet = snprintf( errStr, ERR_STR_SIZE, "ENOSPC in %s", callerName );
+	break;
 
-        errExit( errStr );
-    }
+	case EACCES:
+		snprintfRet = snprintf( errStr, ERR_STR_SIZE, "EACCES in %s", callerName );
+	break;
+
+	default:
+		snprintfRet = snprintf( errStr, ERR_STR_SIZE, "Unknown error %i in %s", errno, callerName);
+	}
+
+	if ( snprintfRet < 0 ) {
+		errExit( "snprintf" );
+	}
+
+	errExit( errStr );
 }
 
 char* addNamespacePrefix( const char* str ) {
