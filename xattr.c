@@ -121,7 +121,7 @@ ssize_t listAttrs( const char* path, void* data, size_t nbytes ) {
     checkReturnValue( "listAttrs", ret );
 
 	// Do the string manipulation
-	char* bitstring = data;// Cast the void pointer to a string
+	char* bitstring = (char*) data; // Cast the void pointer to a string
 	int len = (int) bitstring[0];// Bootstrap the first pointer
 	for ( int i = 1; i < nbytes; i++ ) {
 		if ( i == len ) {
