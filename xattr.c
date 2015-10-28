@@ -1,4 +1,9 @@
 /*
+Crossxattr
+==========
+
+Wrappers for xattr related system calls so they have a common interface across GNU+Linux & FreeBSD
+
 Copyright (c) 2015 Tom Eccles
 github.com/tblah/crossxattr
 
@@ -13,10 +18,10 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
-along with this program.  If not, see <http://www.gnu.org/licenses/>.*/
+along with this program.  If not, see <http://www.gnu.org/licenses/>.
+*/
 
 #include "errExit.h"
-// wrappers for the system calls so they have a common interface
 
 #define ERR_STR_SIZE 200
 
@@ -32,10 +37,10 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.*/
 
 void checkReturnValue( const char* callerName, ssize_t ret ) {
 	/*
-	 *Errno documentation can be found online here:
-	 *https://www.freebsd.org/cgi/man.cgi?query=errno&apropos=0&sektion=0&manpath=FreeBSD+10.2-RELEASE&arch=default&format=html
-	 *They can of course also be accessed via man on FreeBSD
-	 * */
+	 Errno documentation can be found online here:
+	 https://www.freebsd.org/cgi/man.cgi?query=errno&apropos=0&sektion=0&manpath=FreeBSD+10.2-RELEASE&arch=default&format=html
+	 They can of course also be accessed via man on FreeBSD
+	*/
 
 	if ( ret >= 0 ) {
 		return;
@@ -106,27 +111,25 @@ ssize_t deleteAttr( const char* path, const char* attrname ) {
 }
 
 ssize_t listAttrs( const char* path, void* data, size_t nbytes ) {
-    /* TODO: fix output to conform with independent form as specified in the
-     header file
-
+    /* 
 	 extattr_list_file() returns a list of attributes present in the requested namespace.
 	 Each list entry consists of a single byte containing the length of the attribute name.
 	 The attribute name is not terminated by ASCII 0 (nul).
-	 */
+	*/
     ssize_t ret = extattr_list_file( path, EXTATTR_NAMESPACE_USER, data, nbytes );
 
     checkReturnValue( "listAttrs", ret );
-	//Do the string manipulation
-	char* bitstring = data;
-	int len = (int) bitstring[0];
-	int i = 1;
-	while ( i < nbytes ){
+
+	// Do the string manipulation
+	char* bitstring = data;// Cast the void pointer to a string
+	int len = (int) bitstring[0];// Bootstrap the first pointer
+	for ( int i = 1; i < nbytes; i++ ) {
 		if ( i == len ) {
+			// Set the position of the next pointer
 			len = (int) bitstring[i];
 			bitstring[i] = '\0';
 		}
 		bitstring[i-1] = bitstring[i];
-		i++;
 	}
     return ret;
 }
@@ -144,41 +147,48 @@ ssize_t listAttrs( const char* path, void* data, size_t nbytes ) {
 #include <stdio.h>
 
 void checkReturnValue( const char* callerName, ssize_t ret ) {
-    if ( ret != -1 )
+
+    if ( ret >= 0 ) {
         return;
+	}
 
     char errStr[ERR_STR_SIZE];
+	int snprintfRet = 0;
     
-    if ( errno == ENOATTR ) {
-        int snprintfRet = snprintf( errStr, ERR_STR_SIZE, "The named attribute does not exist or you have no access to it (from %s)",
-                callerName );
-        if ( snprintfRet < 0 )
-            errExit( "snprintf" );
+	switch ( errno ) {
+	case ENOATTR:
+		snprintfRet = snprintf( errStr, ERR_STR_SIZE, "ENOATTR in %s", callerName );
+	break;
 
-        fprintf( stderr, "%s\n", errStr );
+	case ENOTSUP:
+		snprintfRet = snprintf( errStr, ERR_STR_SIZE, "ENOSUP in %s", callerName );
+	break;
 
-    } else if ( errno == ENOTSUP ) {
-        errExit( "You forgot to mount the filesystem with extended attributes enabled" );
+	case ERANGE:
+		snprintfRet = snprintf( errStr, ERR_STR_SIZE, "ERANGE in %s", callerName );
+	break;
 
-    } else if ( errno == ERANGE ) {
-        int snprintfRet = snprintf( errStr, ERR_STR_SIZE, "The size of the buffer is insufficient to hold the result (from %s)",
-                callerName );
-        if (snprintfRet < 0 )
-            errExit( "sprintf" );
+	case EDQUOT:
+		snprintfRet = snprintf( errStr, ERR_STR_SIZE, "EDQUOT in %s", callerName );
+	break;
 
-        errExit( errStr );
-    } else if ( ( errno == EDQUOT ) || ( errno == ENOSPC ) ) {
-        errExit( "There is insufficient space on the filesystem or in the user filesystem quota to perform extended attribute operation\n" );
-    } else if ( errno == EACCES )
-        errExit( "You do not have search permission on one of the directories in the specified path\n" );
-    else {
-        int snprintfRet = snprintf( errStr, ERR_STR_SIZE, "Some other error occurred. "
-						"See the man pages (chapter 2) for stat and for the linux system call. This is from %s and errno was %i", callerName, errno );
-        if ( snprintfRet < 0 )
-            errExit( "snprintf" );
+	case ENOSPC:
+		snprintfRet = snprintf( errStr, ERR_STR_SIZE, "ENOSPC in %s", callerName );
+	break;
 
-        errExit( errStr );
-    }
+	case EACCES:
+		snprintfRet = snprintf( errStr, ERR_STR_SIZE, "EACCES in %s", callerName );
+	break;
+
+	default:
+		snprintfRet = snprintf( errStr, ERR_STR_SIZE, "Unknown error %i in %s", errno, callerName);
+	}
+
+	if ( snprintfRet < 0 ) {
+		errExit( "snprintf" );
+	}
+
+	errExit( errStr );
 }
 
 char* addNamespacePrefix( const char* str ) {

@@ -3,7 +3,7 @@ Cross platform extended attributes C code for another project.
 
 This project is unfinished.
 
-Support is currently planned for FreeBSD and GNU+Linux.
+Support is currently implemented for FreeBSD and GNU+Linux.
 
 ## Functions
 All extended attributes are operated on in the USER namespace. Extended attributes of links are not planned to be supported (although there is no reason why not).
