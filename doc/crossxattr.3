@@ -1,0 +1,43 @@
+.TH CROSSXATTR 1 2015-10-30 GNU "Programmer's Manual"
+
+.SH NAME 
+crossxattr - manual for using the crossxattr library
+
+.SH SYNOPSIS
+.B #include <crossxattr/xattr.h>
+.sp
+.BI "ssize_t getAttr( const char* " path ", const char* " attrname ", void* " data ", size_t " nbytes " );"
+.br
+.BI "ssize_t setAttr( const char* " path ", const char* " attrname ", const void* " data ", size_t " nbytes " );"
+.br
+.BI "ssize_t deleteAttr( const char* " path ", const char* " attrname " );"
+.br
+.BI "ssize_t listAttrs( const char* " path ", void* " data ", size_t " nbytes " );"
+
+.SH DESCRIPTION
+Crossxattr is a common interface library for consistent access of xattrs across FreeBSD and Linux. The library  provides calls to get, set, list and delete xattrs from a
+.I path
+\[char46] only xattrs
+in the namespace of the current user are accessible.
+
+.SH RETURNS
+Functions
+.BR getAttr (),
+.BR setAttr (),
+.BR deleteAttr ()
+& 
+.BR listAttr ()
+return -1 if a non fatal error occurs.
+The functions 
+.BR getAttr ()
+&
+.BR listAttr ()
+write to 
+.I data
+and set 
+.I nbytes
+equal to the length of the output.
+
+.SH Errors
+
+All known errors are handled internally.

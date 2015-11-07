@@ -33,6 +33,7 @@ install:
 	cp libxattr.a $(INSTALL_PATH)/lib/libxattr.a; true
 	cp libxattr.so $(INSTALL_PATH)/lib/libxattr.so; true
 	cp xattr.h $(INSTALL_PATH)/include/libxattr.h; true
+	cp doc/crossxattr.3 /usr/share/man/man3/crossxattr.3; true
 
 uninstall:
 	@-2>/dev/null rm $(INSTALL_PATH)/lib/libxattr.a; true
